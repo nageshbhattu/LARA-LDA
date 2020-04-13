@@ -52,6 +52,9 @@ public class Corpus {
     public Corpus(String dataFilename) {
         read(dataFilename);
     }
+    public Corpus(){
+        
+    }
     
     public Corpus(Vector<Hotel> hotelList,Hashtable<String,Integer> vocabulary, int numAspects){
         Vector<Document> cdocs = new Vector<Document>();

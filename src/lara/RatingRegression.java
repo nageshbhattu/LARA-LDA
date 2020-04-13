@@ -23,6 +23,7 @@ import java.util.TreeMap;
 
 import optimizer.LBFGS;
 import optimizer.LBFGS.ExceptionWithIflag;
+import org.knowceans.lda.Document;
 import utilities.Utilities;
 
 public class RatingRegression {
@@ -149,7 +150,7 @@ public class RatingRegression {
                 m_testSize++;
             }
             vct = new Vector4Review(hDoc.m_ID, hDoc.ratings, isTrain);
-
+            Document doc = hDoc.doc;
             if (aspectSize == null) {
                 aspectSize = new double[vct.getAspectSize()];
                 m_k = aspectSize.length;
@@ -157,7 +158,7 @@ public class RatingRegression {
             }
 
             for (int i = 0; i < vct.getAspectSize(); i++) {
-                vct.setAspect(i, tmpTxt.split(" "));//different data format
+                vct.setAspect(i,doc.getWords(), hDoc.getPhiCounts(i));//different data format
                 //vct.setAspect(i, tmpTxt.split("\t"));//depend on the input
                 aspectSize[i] += vct.getAspectSize(i);
             }
@@ -168,9 +169,7 @@ public class RatingRegression {
             //      System.out.println(m_collection.);
             len = Math.max(vct.getLength(), len);//max index word
 
-            if (size > 0 && m_collection.size() >= size) {
-                break;
-            }
+            
         }
         //	System.out.println("Train data size*****\t"+m_trainSize+":::"+m_testSize);
         double sum = Utilities.sum(aspectSize);

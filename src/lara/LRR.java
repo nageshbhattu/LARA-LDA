@@ -1,10 +1,12 @@
 package lara;
 
+import Preprocessing.HotelDocument;
 import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import optimizer.LBFGS;
@@ -418,10 +420,17 @@ public class LRR extends RatingRegression {
         }
         return f;
     }
-
-    public void EM_est(String filename, int maxIter, double converge) throws FileNotFoundException, IOException {
+    public void EM_est(String filename, int maxIter, double converge) throws IOException{
+        int len = LoadVectors(filename);
+        EM_est(len,maxIter,converge);
+    }
+    public void EM_est(ArrayList<HotelDocument> hDocList,int maxIter,double converge) throws IOException{
+        int len = LoadVectors(hDocList);
+        EM_est(len,maxIter,converge);
+    }
+    public void EM_est(int l, int maxIter, double converge) throws FileNotFoundException, IOException {
         int iter = 0, alpha_exp = 0, alpha_cov = 0;
-        double tag, diff = 10, likelihood = 0, old_likelihood = init(LoadVectors(filename));
+        double tag, diff = 10, likelihood = 0, old_likelihood = init(l);
 
         System.out.println("[Info]Step\toMSE\taMSE\taCorr\tiCorr\tMAP@10\tcov(a)\texp(a)\tobj\tconverge");
         while (iter < Math.min(8, maxIter) || (iter < maxIter && diff > converge)) {
@@ -468,8 +477,8 @@ public class LRR extends RatingRegression {
 
     public static void main(String[] args) throws IOException {
         LRR model = new LRR(500, 1e-2, 5000, 1e-2, 2.0);//
-        model.EM_est("LARAInput.txt", 10, 1e-4);
-        model.SavePrediction("prediction.dat");
-        model.SaveModel("model_hotel.dat");
+        model.EM_est("LARA_input.dat", 10, 1e-4);
+        model.SavePrediction("prediction-lara.dat");
+        model.SaveModel("model_hotel-lara.dat");
     }
 }

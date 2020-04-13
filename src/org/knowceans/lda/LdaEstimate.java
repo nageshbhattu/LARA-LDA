@@ -56,15 +56,15 @@ public class LdaEstimate {
 
     static int NUM_INIT = 1;
 
-    static float EM_CONVERGED;
+    public static float EM_CONVERGED;
 
-    static int EM_MAX_ITER;
+    public static int EM_MAX_ITER;
 
-    static int ESTIMATE_ALPHA;
+    public static int ESTIMATE_ALPHA;
 
     public static double INITIAL_ALPHA;
 
-    static double K;
+    public static double K;
 
     static {
         rand = new Random(4357);

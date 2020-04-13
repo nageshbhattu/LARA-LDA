@@ -170,5 +170,9 @@ public class Document {
         b.append("Document {length=" + length + " total=" + total + "}");
         return b.toString();
     }
+    
+    public void sortCounts(){
+        
+    }
 
 }

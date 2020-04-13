@@ -59,7 +59,7 @@ public class LdaModel {
      * @param numTopics
      *            number of topics
      */
-    LdaModel(int numTerms, int numTopics) {
+    public LdaModel(int numTerms, int numTopics) {
         int i, j;
         this.numTopics = numTopics;
         this.numTerms = numTerms;
@@ -92,15 +92,11 @@ public class LdaModel {
      * 
      * @param modelRoot
      */
-    LdaModel(String modelRoot) {
+    public LdaModel(String modelRoot) {
         String filename;
         int i, j;
         double x, alpha = 0;
-
         filename = modelRoot + ".other";
-
-        System.out.println("loading " + filename + "\n");
-
         try {
             BufferedReader br = new BufferedReader(new FileReader(filename));
             String line;

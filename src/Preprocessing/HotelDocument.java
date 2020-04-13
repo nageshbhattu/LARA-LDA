@@ -22,4 +22,15 @@ public class HotelDocument {
         this.doc = doc;
         this.ratings = ratings;
     }
+    public void setPhi(double[][] phi){
+        this.phi = phi;
+    }
+    public double[] getPhiCounts(int aspect){
+        double[] phiCounts = new double[doc.getLength()];
+        int[] counts = doc.getCounts();
+        for(int wi = 0;wi<doc.getLength();wi++){
+            phiCounts[wi] = counts[wi]*phi[aspect][wi];
+        }
+        return phiCounts;
+    }
 }

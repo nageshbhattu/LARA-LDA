@@ -37,9 +37,9 @@ import static java.lang.Double.*;
  */
 public class LdaInference {
 
-    static float VAR_CONVERGED;
+    public static float VAR_CONVERGED;
 
-    static int VAR_MAX_ITER;
+    public static int VAR_MAX_ITER;
 
     /*
      * variational inference

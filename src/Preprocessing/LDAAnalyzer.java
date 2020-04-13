@@ -39,7 +39,7 @@ import static org.knowceans.lda.LdaEstimate.runEm;
 import org.knowceans.lda.LdaInference;
 import org.knowceans.lda.LdaModel;
 
-public class Analyzer {
+public class LDAAnalyzer {
     //this aspect set only exist in the old TripAdvisor reviews
 
     public static final String[] ASPECT_SET = {"Value", "Rooms", "Location", "Cleanliness", "Check in / front desk", "Service", "Business Service"};
@@ -82,7 +82,7 @@ public class Analyzer {
     POSTaggerME m_postagger;
     Stemmer m_stemmer;
     int numAspects;
-    public Analyzer(String seedwords, String stopwords, String stnSplModel, String tknModel, String posModel) {
+    public LDAAnalyzer(String seedwords, String stopwords, String stnSplModel, String tknModel, String posModel) {
         m_hotelList = new Vector<Hotel>();
         m_vocabulary = new Hashtable<String, Integer>();
         m_chi_table = null;
@@ -388,16 +388,16 @@ public class Analyzer {
             }
             writer.close();
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(Analyzer.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(LDAAnalyzer.class.getName()).log(Level.SEVERE, null, ex);
         } catch (UnsupportedEncodingException ex) {
-            Logger.getLogger(Analyzer.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(LDAAnalyzer.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
-            Logger.getLogger(Analyzer.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(LDAAnalyzer.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             try {
                 writer.close();
             } catch (IOException ex) {
-                Logger.getLogger(Analyzer.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(LDAAnalyzer.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
     }
@@ -441,17 +441,17 @@ public class Analyzer {
                     writer.write("\n");
                     hmap.clear();
                 } catch (IOException ex) {
-                    Logger.getLogger(Analyzer.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(LDAAnalyzer.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
             writer.close();
         } catch (IOException ex) {
-            Logger.getLogger(Analyzer.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(LDAAnalyzer.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     static public void main(String[] args) {
         String prefix = "/home/nageshbhattu/BTechProjects/LARA/";
-        Analyzer analyzer = new Analyzer(prefix + "Data/Seeds/hotel_bootstrapping.dat", prefix +"Data/Seeds/stopwords.dat",
+        LDAAnalyzer analyzer = new LDAAnalyzer(prefix + "Data/Seeds/hotel_bootstrapping.dat", prefix +"Data/Seeds/stopwords.dat",
                 prefix + "Data/Model/NLP/en-sent.zip", prefix + "Data/Model/NLP/en-token.zip", prefix + "Data/Model/NLP/en-pos-maxent.bin");
         //analyzer.LoadVocabulary("Data/Seeds/hotel_vocabulary_CHI.dat");
         analyzer.LoadDirectory(prefix + "../LDA/Review_Texts/", ".dat");

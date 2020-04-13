@@ -30,7 +30,7 @@ import opennlp.tools.util.Span;
 import Preprocessing.Review.Sentence;
 import Preprocessing.Review.Token;
 
-public class Analyzer {
+public class LARAAnalyzer {
 
     //this aspect set only exist in the old TripAdvisor reviews
 
@@ -97,7 +97,7 @@ public class Analyzer {
 
     }
 
-    public Analyzer(String seedwords, String stopwords, String stnSplModel, String tknModel, String posModel) {
+    public LARAAnalyzer(String seedwords, String stopwords, String stnSplModel, String tknModel, String posModel) {
         m_hotelList = new Vector<Hotel>();
         m_vocabulary = new Hashtable<String, Integer>();
         m_chi_table = null;
@@ -717,7 +717,7 @@ public class Analyzer {
 
     static public void main(String[] args) {
         String prefix = "/home/nageshbhattu/BTechProjects/LARA/";
-        Analyzer analyzer = new Analyzer(prefix + "Data/Seeds/hotel_bootstrapping.dat", prefix + "Data/Seeds/stopwords.dat",
+        LARAAnalyzer analyzer = new LARAAnalyzer(prefix + "Data/Seeds/hotel_bootstrapping.dat", prefix + "Data/Seeds/stopwords.dat",
                 prefix + "Data/Model/NLP/en-sent.zip", prefix + "Data/Model/NLP/en-token.zip", prefix + "Data/Model/NLP/en-pos-maxent.bin");
         //analyzer.LoadVocabulary("Data/Seeds/hotel_vocabulary_CHI.dat");
         analyzer.LoadDirectory(prefix + "../LDA/Review_Texts/", ".dat");
