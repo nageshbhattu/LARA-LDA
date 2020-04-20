@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Vector;
 
 import optimizer.LBFGS;
 import optimizer.LBFGS.ExceptionWithIflag;
@@ -424,7 +425,7 @@ public class LRR extends RatingRegression {
         int len = LoadVectors(filename);
         EM_est(len,maxIter,converge);
     }
-    public void EM_est(ArrayList<HotelDocument> hDocList,int maxIter,double converge) throws IOException{
+    public void EM_est(Vector<HotelDocument> hDocList,int maxIter,double converge) throws IOException{
         int len = LoadVectors(hDocList);
         EM_est(len,maxIter,converge);
     }
@@ -432,7 +433,8 @@ public class LRR extends RatingRegression {
         int iter = 0, alpha_exp = 0, alpha_cov = 0;
         double tag, diff = 10, likelihood = 0, old_likelihood = init(l);
 
-        System.out.println("[Info]Step\toMSE\taMSE\taCorr\tiCorr\tMAP@10\tcov(a)\texp(a)\tobj\tconverge");
+        //System.out.println("");
+        System.out.println("[Info]\nStep\toMSE\taMSE\taCorr\tiCorr\tMAP@10\tcov(a)\texp(a)\tobj\tconverge");
         while (iter < Math.min(8, maxIter) || (iter < maxIter && diff > converge)) {
             alpha_exp = 0;
             alpha_cov = 0;

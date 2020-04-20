@@ -24,6 +24,8 @@
  */
 package org.knowceans.lda;
 
+import java.io.Serializable;
+
 /**
  * wrapper for a document in LDA
  * <p>
@@ -31,7 +33,7 @@ package org.knowceans.lda;
  * 
  * @author heinrich
  */
-public class Document {
+public class Document implements Serializable{
 
     private int[] words;
 

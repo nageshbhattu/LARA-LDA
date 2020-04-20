@@ -1,29 +1,13 @@
-/*
- * (C) Copyright 2005, Gregor Heinrich (gregor :: arbylon : net) (This file is
- * part of the lda-j (org.knowceans.lda.*) experimental software package.)
- */
-/*
- * lda-j is free software; you can redistribute it and/or modify it under the
- * terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 2 of the License, or (at your option) any later
- * version.
- */
-/*
- * lda-j is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- */
+
 /*
  * You should have received a copy of the GNU General Public License along with
  * this program; if not, write to the Free Software Foundation, Inc., 59 Temple
  * Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-/*
- * Created on Jan 4, 2005
- */
-package org.knowceans.lda;
+package slda;
 
+import org.knowceans.lda.*;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -34,61 +18,67 @@ import java.io.IOException;
 import static java.lang.Math.*;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.Arrays;
 import java.util.Random;
-//import org.knowceans.util.CokusNative;
+import static org.knowceans.lda.Utils.digamma;
+import static slda.SLDArMStep.estimateDeltaSq;
+import static slda.SLDArMStep.estimateEta;
 
 /**
  * lda parameter estimation
  * <p>
  * lda-c reference: functions in lda-estimate.c.
  * 
- * @author heinrich
+ * @author nageshbhattu
  */
-public class LdaEstimate {
+public class SLDArEstimate {
 
-    /*
-     * For remote debugging: -Xdebug -Xnoagent
-     * -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=
-     * <MyJdwpDebugPort>
-     */
-    static Random rand;
-    static int LAG = 10;
+    int LAG = 10;
 
-    static int NUM_INIT = 1;
+    int NUM_INIT = 1;
 
-    public static float EM_CONVERGED;
+    public float EM_CONVERGED;
 
-    public static int EM_MAX_ITER;
+    public int EM_MAX_ITER;
 
-    public static int ESTIMATE_ALPHA;
+    public int ESTIMATE_ALPHA;
 
-    public static double INITIAL_ALPHA;
+    public double INITIAL_ALPHA;
 
-    public static double K;
+    public double numTopics;
 
-    static {
-        rand = new Random(4357);
+    public Random rand = new Random(4357);
+    
+    
+    public SLDArInference sldarInference; 
+    
+    //public double[][] covMatrix;
+    //public double alphaSuffStats;
+    //public double[] ezy;
         //CokusNative.cokusseed(4357);
+    public SLDArEstimate(){
+        sldarInference = new SLDArInference();
+    }
+    public SLDArEstimate(double VAR_CONVERGED, int VAR_MAX_ITER){
+        sldarInference = new SLDArInference(VAR_CONVERGED, VAR_MAX_ITER);
     }
 
-    static double myrand() {
+    double myrand() {
         return rand.nextDouble();
-        //return (((long) CokusNative.cokusrand()) & 0xffffffffl)
-        //    / (double) 0x100000000l;
     }
 
     /**
      * initializes class_word and class_total to reasonable beginnings.
      */
-    public static LdaModel initialModel(String start, Corpus corpus,
+    public SLDArModel initialModel(String start, SLDArCorpus corpus,
         int numTopics, double alpha) {
         int k, d, i, n;
-        LdaModel model;
-        Document doc;
+        SLDArModel model;
+        SLDArDocument doc;
 
         if (start.equals("seeded")) {
-            model = new LdaModel(corpus.getNumTerms(), numTopics);
-            model.setAlpha(alpha);
+            model = new SLDArModel(corpus.getNumTerms(), numTopics);
+            model.setAlpha(alpha);  //we can set this in above constructor
             // foreach topic
             for (k = 0; k < numTopics; k++) {
                 // sample NUM_INIT documents and add their term counts to the
@@ -108,9 +98,16 @@ public class LdaEstimate {
                     model.addClassWord(k, n, 1.0 / model.getNumTerms());
                     model.addClassTotal(k, model.getClassWord(k, n));
                 }
+                model.ezy[k] = -1 + 2 * k /model.getNumTopics();
+                for(int l = 0;l<model.getNumTopics();l++){
+                    model.covMatrix[k][l] = 0.0;
+                }
+            }
+            for (d = 0;d<corpus.getNumDocs();d++){
+                model.ysquared += corpus.getDoc(d).getRating() * corpus.getDoc(d).getRating();
             }
         } else if (start.equals("random")) {
-            model = new LdaModel(corpus.getNumTerms(), numTopics);
+            model = new SLDArModel(corpus.getNumTerms(), numTopics);
             model.setAlpha(alpha);
             // for each topic
             for (k = 0; k < numTopics; k++) {
@@ -122,33 +119,56 @@ public class LdaEstimate {
                         + myrand());
                     model.addClassTotal(k, model.getClassWord(k, n));
                 }
+                // SLDA sufficient stats must be initialized
+                model.ezy[k] = -1 + 2 * k /model.getNumTopics();
+                for(int l = 0;l<model.getNumTopics();l++){
+                    model.covMatrix[k][l] = 0.0;
+                }
             }
+            for (d = 0;d<corpus.getNumDocs();d++){
+                model.ysquared += corpus.getDoc(d).getRating() * corpus.getDoc(d).getRating();
+            }
+            double[] eta = rand.doubles().toArray();
+            model.setEta(eta);
+            
         } else {
             // load model from file (.beta and .other data)
-            model = new LdaModel(start);
+            model = new SLDArModel(start);
         }
+        
+        model.alphaSuffStats = 0.0;
+        model.alpha = INITIAL_ALPHA/(double)model.getNumTopics();
         return model;
     }
 
     /**
      * iterate_document
      */
-    public static double docEm(Document doc, double[] gamma, LdaModel model,
-        LdaModel nextModel) {
+    public double docEm(SLDArDocument doc, double[] gamma, SLDArModel model,
+        SLDArModel nextModel, double[][]a) {
         double likelihood;
         double[][] phi;
         int n, k;
 
         phi = new double[doc.getLength()][model.getNumTopics()];
-
-        likelihood = LdaInference.ldaInference(doc, model, gamma, phi);
-        for (n = 0; n < doc.getLength(); n++) {
-            for (k = 0; k < model.getNumTopics(); k++) {
-                nextModel.addClassWord(k, doc.getWord(n), doc.getCount(n)
-                    * phi[n][k]);
-                nextModel.addClassTotal(k, doc.getCount(n) * phi[n][k]);
+        likelihood = sldarInference.sldaInference(doc, model, gamma, phi, a);
+        double gammaSum = 0.0;
+        for (k = 0; k < model.getNumTopics(); k++) {
+            double dVal = 0;
+            gammaSum +=gamma[k];
+            model.alphaSuffStats += digamma(gamma[k]);
+            for (n = 0; n < doc.getLength(); n++) {
+                double ePhi = doc.getCount(n) * phi[n][k];
+                nextModel.addClassWord(k, doc.getWord(n), ePhi);
+                nextModel.addClassTotal(k, ePhi);
+                dVal+= ePhi/doc.getTotal();
             }
+            for(int m = 0;m<model.getNumTopics();m++){
+                model.covMatrix[k][m] += a[k][m];
+            }
+            model.ezy[k] += dVal*doc.getRating();
         }
+        model.alphaSuffStats -= model.getNumTopics() * digamma(gammaSum);
         return likelihood;
     }
 
@@ -177,13 +197,13 @@ public class LdaEstimate {
     /**
      * run_em
      */
-    public static LdaModel runEm(String start, String directory, Corpus corpus, int numTopics) {
+    public SLDArModel runEm(String start, String directory, SLDArCorpus corpus, int numTopics) {
         try {
             BufferedWriter likelihoodFile;
             String filename;
             int i, d;
             double likelihood, likelihoodOld = Double.NEGATIVE_INFINITY, converged = 1;
-            LdaModel model, nextModel;
+            SLDArModel model, nextModel;
             double[][] varGamma;
             filename = directory + "/" + "likelihood.dat";
             likelihoodFile = new BufferedWriter(new FileWriter(filename));
@@ -191,6 +211,15 @@ public class LdaEstimate {
             model = initialModel(start, corpus, numTopics, INITIAL_ALPHA);
             filename = directory + "/000";
             model.save(filename);
+            double dmean = 0;
+            for (d = 0; d < corpus.getNumDocs(); d++)
+                dmean += corpus.getDoc(d).getRating() / corpus.getNumDocs();
+            model.deltasq = 0;
+           for (d = 0; d < corpus.getNumDocs(); d++)
+                model.deltasq += (corpus.getDoc(d).getRating() - dmean) * (corpus.getDoc(d).getRating() - dmean)
+                / corpus.getNumDocs();
+            
+            double[][] a = new double[numTopics][numTopics];
             i = 0;
             NumberFormat nf = new DecimalFormat("000");
             String itername = "";
@@ -199,18 +228,19 @@ public class LdaEstimate {
                 i++;
                 System.out.println("**** em iteration " + i + " ****");
                 likelihood = 0;
-                nextModel = new LdaModel(model.getNumTerms(), model
-                    .getNumTopics());
+                model.zeroInitializeSS();
+                nextModel = new SLDArModel(model.getNumTerms(), model.getNumTopics());
                 nextModel.setAlpha(INITIAL_ALPHA);
                 for (d = 0; d < corpus.getNumDocs(); d++) {
-                    if ((d % 100) == 0)
+                    if ((d % 10000) == 0)
                         System.out.println("document " + d);
-                    likelihood += docEm(corpus.getDoc(d), varGamma[d], model,
-                        nextModel);
+                    likelihood += docEm(corpus.getDoc(d), varGamma[d], model, nextModel,a);
                 }
                 if (ESTIMATE_ALPHA == 1)
-                    LdaAlpha.maximizeAlpha(varGamma, nextModel, corpus
-                        .getNumDocs());
+                    SLDArMStep.maximizeAlpha(varGamma, nextModel, corpus.getNumDocs());
+                    nextModel.eta = estimateEta(model.covMatrix,model.ezy,model.getNumTopics());
+                    nextModel.deltasq = estimateDeltaSq(model.ysquared,nextModel.eta, model.ezy, model.getNumTopics(), corpus.getNumDocs());
+                nextModel.ysquared = model.ysquared;
                 model.free();
                 model = nextModel;
                 assert likelihoodOld != 0;
@@ -249,8 +279,12 @@ public class LdaEstimate {
     /**
      * read settings.
      */
-    public static void readSettings(String filename) {
+    public void readSettings(String filename) {
         String alphaAction = "";
+        int VAR_MAX_ITER = 0;
+        double VAR_CONVERGED = 0.0;
+        
+        
 
         BufferedReader br;
         try {
@@ -259,15 +293,15 @@ public class LdaEstimate {
             while ((line = br.readLine()) != null) {
 
                 if (line.startsWith("var max iter ")) {
-                    LdaInference.VAR_MAX_ITER = Integer.parseInt(line
+                    sldarInference.VAR_MAX_ITER = Integer.parseInt(line
                         .substring(13).trim());
                 } else if (line.startsWith("var convergence ")) {
-                    LdaInference.VAR_CONVERGED = Float.parseFloat(line
+                    sldarInference.VAR_CONVERGED = Float.parseFloat(line
                         .substring(16).trim());
                 } else if (line.startsWith("em max iter ")) {
-                    EM_MAX_ITER = Integer.parseInt(line.substring(12).trim());
+                    this.EM_MAX_ITER = Integer.parseInt(line.substring(12).trim());
                 } else if (line.startsWith("em convergence ")) {
-                    EM_CONVERGED = Float.parseFloat(line.substring(15).trim());
+                    this.EM_CONVERGED = Float.parseFloat(line.substring(15).trim());
                 } else if (line.startsWith("alpha ")) {
                     alphaAction = line.substring(6).trim();
                 }
@@ -291,28 +325,28 @@ public class LdaEstimate {
     /**
      * inference only
      */
-    public static void infer(String modelRoot, String save, Corpus corpus) {
+    public void infer(String modelRoot, String save, SLDArCorpus corpus) {
         String filename;
         int i, d, n;
-        LdaModel model;
+        SLDArModel model;
         double[][] varGamma, phi;
         double likelihood;
-        Document doc;
+        SLDArDocument doc;
 
-        model = new LdaModel(modelRoot);
+        model = new SLDArModel(modelRoot);
         varGamma = new double[corpus.getNumDocs()][model.getNumTopics()];
         filename = save + ".likelihoods";
+        double[][] a = new double[model.getNumTopics()][model.getNumTopics()];
 
         try {
             BufferedWriter bw = new BufferedWriter(new FileWriter(filename));
             for (d = 0; d < corpus.getNumDocs(); d++) {
-                if ((d % 100) == 0)
+                if ((d % 10000) == 0)
                     System.out.println("document " + d);
 
                 doc = corpus.getDoc(d);
                 phi = new double[doc.getLength()][model.getNumTopics()];
-                likelihood = LdaInference.ldaInference(doc, model, varGamma[d],
-                    phi);
+                likelihood = sldarInference.sldaInference(doc, model, varGamma[d], phi, a);
 
                 bw.write(Utils.formatDouble(likelihood));
                 bw.newLine();
@@ -333,34 +367,33 @@ public class LdaEstimate {
         int i = 0;
         double y = 0;
         double x, z, d;
-        Corpus corpus;
-
+        SLDArCorpus corpus;
+        SLDArEstimate sldarEstimate = new SLDArEstimate();
         // command: lda est 0.10 16 settings.txt berry/berry.dat seeded
         // berry.model
         if (args[0].equals("est")) {
             if (args.length < 7) {
                 System.out
-                    .println("usage\n: lda est <initial alpha> <k> <settings> <data> <random/seeded/*> <directory>");
+                    .println("usage\n: slda est <initial alpha> <k> <settings> <data> <random/seeded/*> <directory>");
                 System.out
-                    .println("example\n: lda est 10 100 settings.txt ..\\ap\\ap.dat seeded ..\\ap.model");
+                    .println("example\n: slda est 10 100 settings.txt ..\\ap\\ap.dat seeded ..\\ap.model");
                 return;
             }
 
-            INITIAL_ALPHA = Float.parseFloat(args[1]);
+            sldarEstimate.INITIAL_ALPHA = Float.parseFloat(args[1]);
             int K = Integer.parseInt(args[2]);
-            readSettings(args[3]);
-            corpus = new Corpus(args[4]);
+            sldarEstimate.readSettings(args[3]);
+            corpus = new SLDArCorpus(args[4]);
             boolean a = new File(args[6]).mkdir();
 
             System.out.println("LDA estimation. Settings:");
-            System.out.println("\tvar max iter " + LdaInference.VAR_MAX_ITER);
-            System.out.println("\tvar convergence "
-                + LdaInference.VAR_CONVERGED);
-            System.out.println("\tem max iter " + EM_MAX_ITER);
-            System.out.println("\tem convergence " + EM_CONVERGED);
-            System.out.println("\testimate alpha " + ESTIMATE_ALPHA);
+            System.out.println("\tvar max iter " + sldarEstimate.sldarInference.VAR_MAX_ITER);
+            System.out.println("\tvar convergence "+ sldarEstimate.sldarInference.VAR_CONVERGED);
+            System.out.println("\tem max iter " + sldarEstimate.EM_MAX_ITER);
+            System.out.println("\tem convergence " + sldarEstimate.EM_CONVERGED);
+            System.out.println("\testimate alpha " + sldarEstimate.ESTIMATE_ALPHA);
 
-            LdaModel model = runEm(args[5], args[6], corpus, K);
+            SLDArModel model = sldarEstimate.runEm(args[5], args[6], corpus, K);
             // model.getClassWord();
 
         } else {
@@ -368,25 +401,24 @@ public class LdaEstimate {
             // berry.inf
             if (args.length < 5) {
                 System.out
-                    .println("usage\n: lda inf <settings> <model> <data> <name>\n");
+                    .println("usage\n: slda inf <settings> <model> <data> <name>\n");
                 System.out
-                    .println("example\n: lda inf settings.txt ..\\ap.model ..\\aptest ..\\aptest.inf\n");
+                    .println("example\n: slda inf settings.txt ..\\ap.model ..\\aptest ..\\aptest.inf\n");
                 return;
             }
-            readSettings(args[1]);
+            sldarEstimate.readSettings(args[1]);
 
             System.out.println("LDA inference. Settings:");
-            System.out.println("\tvar max iter " + LdaInference.VAR_MAX_ITER);
+            System.out.println("\tvar max iter " + sldarEstimate.sldarInference.VAR_MAX_ITER);
             System.out.println("\tvar convergence "
-                + LdaInference.VAR_CONVERGED);
-            System.out.println("\tem max iter " + EM_MAX_ITER);
-            System.out.println("\tem convergence " + EM_CONVERGED);
-            System.out.println("\testimate alpha " + ESTIMATE_ALPHA);
-
-            corpus = new Corpus(args[3]);
-
-            infer(args[2], args[4], corpus);
-
+                + sldarEstimate.sldarInference.VAR_CONVERGED);
+            System.out.println("\tem max iter " + sldarEstimate.EM_MAX_ITER);
+            System.out.println("\tem convergence " + sldarEstimate.EM_CONVERGED);
+            System.out.println("\testimate alpha " + sldarEstimate.ESTIMATE_ALPHA);
+            corpus = new SLDArCorpus(args[3]);
+            sldarEstimate.infer(args[2], args[4], corpus);
         }
     }
+
+    
 }

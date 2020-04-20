@@ -158,5 +158,57 @@ public class Utils {
         }
         return "[" + shades[a] + "]";
     }
+    
+    // Added for SLDAr
+    public static double dotprod(double[] a, double[] b, int n)
+    {
+	double res = 0;
+	for ( int i=0; i<n; i++ ) {
+		res += a[i] * b[i];
+	}
+	return res;
+    }
+    
+    /* A + ab^\top*/
+    public static void addmatrix(double[][] A, double[] a , double[] b , int n , double factor){
+	for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                A[i][j] += a[i] * b[j] * factor;
+            }
+        }
+    }
+
+    /* A + ab^\top + ba^\top*/
+    public static void addmatrix2(double[][] A, double[] a , double[] b , int n , double factor){
+	for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                A[i][j] += (a[i] * b[j] + b[i] * a[j]) * factor;
+            }
+        }
+    }
+    
+    /* a vector times a (n x n) square matrix  */
+    public static double[] matrixprod(double[] a, double[][] A, int n) {
+        double[] res = new double[n];
+        for (int i = 0; i < n; i++) {
+            res[i] = 0;
+            for (int j = 0; j < n; j++) {
+                res[i] += a[j] * A[j][i];
+            }
+        }
+        return res;
+    }
+    /* a (n x n) square matrix times a vector. */
+    public static double[] matrixprod(double [][] A, double [] a,  int n)
+    {
+        double[] res = new double[n];
+        for (int i = 0; i < n; i++) {
+            res[i] = 0;
+            for (int j = 0; j < n; j++) {
+                res[i] += a[j] * A[i][j];
+            }
+        }
+        return res;
+    }
 
 }

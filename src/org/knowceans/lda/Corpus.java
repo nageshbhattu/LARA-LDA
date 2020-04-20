@@ -26,6 +26,8 @@ package org.knowceans.lda;
 
 import Preprocessing.Hotel;
 import Preprocessing.Review;
+import Preprocessing.Sentence;
+import Preprocessing.Token;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -63,9 +65,8 @@ public class Corpus {
             double[] ratings = new double[numAspects];
             double[] counts = new double[numAspects];
             for (Review r : hotel.m_reviews) {
-                
-                for (Review.Sentence s : r.m_stns) {
-                    for (Review.Token t : s.m_tokens) {
+                for (Sentence s : r.m_stns) {
+                    for (Token t : s.m_tokens) {
                         if (vocabulary.contains(t.m_lemma)) {
                             if (hmap.containsKey(vocabulary.get(t.m_lemma))) {
                                 hmap.put(vocabulary.get(t.m_lemma), hmap.get(vocabulary.get(t.m_lemma)) + 1);

@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.Vector;
 
 import optimizer.LBFGS;
 import optimizer.LBFGS.ExceptionWithIflag;
@@ -131,7 +132,7 @@ public class RatingRegression {
         }
     }
 
-    public int LoadVectors(ArrayList<HotelDocument> hDocList) {
+    public int LoadVectors(Vector<HotelDocument> hDocList) {
         String tmpTxt;
 
         m_trainSize = 0;
@@ -168,8 +169,6 @@ public class RatingRegression {
                                // for(int i=0; i<m_collection.size(); i++)
             //      System.out.println(m_collection.);
             len = Math.max(vct.getLength(), len);//max index word
-
-            
         }
         //	System.out.println("Train data size*****\t"+m_trainSize+":::"+m_testSize);
         double sum = Utilities.sum(aspectSize);
@@ -291,10 +290,10 @@ public class RatingRegression {
         if (aError) {
             System.out.print('x');
         } else {
-            System.out.print('l');
+            System.out.print("l ");
         }
 
-        System.out.print(String.format("%.3f\t%.3f\t%.3f\t%.3f\t%.5f", Math.sqrt(oMSE / m_trainSize), Math.sqrt(aMSE / m_trainSize), (icorr / m_trainSize), (acorr / m_k), map));
+        System.out.print(String.format("%.3f\t%.3f\t%.3f\t%.3f\t%.5f", Math.sqrt(oMSE / m_trainSize), Math.sqrt(aMSE / m_trainSize), (acorr / m_k), (icorr / m_trainSize), map));
         bw.close();
 
     }

@@ -1,29 +1,17 @@
 /*
- * (C) Copyright 2005, Gregor Heinrich (gregor :: arbylon : net) (This file is
- * part of the lda-j (org.knowceans.lda.*) experimental software package.)
- */
-/*
- * lda-j is free software; you can redistribute it and/or modify it under the
- * terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 2 of the License, or (at your option) any later
- * version.
- */
-/*
- * lda-j is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- */
-/*
  * You should have received a copy of the GNU General Public License along with
  * this program; if not, write to the Free Software Foundation, Inc., 59 Temple
  * Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-package org.knowceans.lda;
+package slda;
 
 import static org.knowceans.lda.Utils.*;
 import static java.lang.Math.*;
-
+import org.apache.commons.math3.linear.LUDecomposition;
+import slda.SLDArModel;
+import org.apache.commons.math3.linear.MatrixUtils;
+import org.apache.commons.math3.linear.RealMatrix;
 /**
  * performs optimisation tasks
  * <p>
@@ -31,7 +19,7 @@ import static java.lang.Math.*;
  * 
  * @author heinrich
  */
-public class LdaAlpha {
+public class SLDArMStep {
 
     public static double objective(double s, double suffStats, int numDocs,
         int numTopics) {
@@ -87,7 +75,7 @@ public class LdaAlpha {
         return s;
     }
 
-    public static void maximizeAlpha(double[][] gamma, LdaModel model,
+    public static void maximizeAlpha(double[][] gamma, SLDArModel model,
         int numDocs) {
         int d, k;
         double suffStats = 0, gamma_sum, s;
@@ -105,4 +93,24 @@ public class LdaAlpha {
             numDocs, model.getNumTopics());
         model.setAlpha(s / model.getNumTopics());
     }
+    public static double[] estimateEta(double[][] covMatrix,double[] ezy, int numTopics){
+        // Compute eta values
+        
+        RealMatrix  rmCovMatrix = MatrixUtils.createRealMatrix(covMatrix);
+        System.out.println("covMatrix*************");
+        for(int i=0; i<numTopics; i++){
+            for(int j=0; j<numTopics; j++){
+                System.out.print(covMatrix[i][j]+"  ");
+            }
+            System.out.println();
+        }
+        RealMatrix rmCovMatrixInverse = new LUDecomposition(rmCovMatrix).getSolver().getInverse();
+        double[][] covMatrixInverse = rmCovMatrixInverse.getData();
+        return matrixprod(covMatrixInverse,ezy,numTopics);
+    }
+    public static double estimateDeltaSq(double ysquared, double[] etaNew, double[] ezy,int numTopics,int numDocs){
+        return (ysquared- dotprod(etaNew, ezy,numTopics))/numDocs;
+    }
+    
+    
 }

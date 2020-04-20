@@ -1,37 +1,22 @@
 /*
- * (C) Copyright 2005, Gregor Heinrich (gregor :: arbylon : net) (This file is
- * part of the lda-j (org.knowceans.lda.*) experimental software package.)
- */
-/*
- * lda-j is free software; you can redistribute it and/or modify it under the
- * terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 2 of the License, or (at your option) any later
- * version.
- */
-/*
- * lda-j is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- */
-/*
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 59 Temple
- * Place, Suite 330, Boston, MA 02111-1307 USA
+
+
  */
 
-/*
- * Created on Dec 3, 2004
- */
-package org.knowceans.lda;
+package slda;
+
+import org.knowceans.lda.*;
+import java.io.Serializable;
 
 /**
- * wrapper for a document in LDA
+ * wrapper for a document in SLDA
  * <p>
  * lda-c reference: struct document in lda.h. TODO automatic length tracking
  * 
- * @author heinrich
+ * @author nagesh bhattu
  */
-public class Document {
+
+public class SLDArDocument implements Serializable{
 
     private int[] words;
 
@@ -40,23 +25,35 @@ public class Document {
     private int length;
 
     private int total;
+    
+    private double rating;
 
     /**
      * 
      */
-    public Document() {
+    public SLDArDocument() {
         length = 0;
         words = new int[0];
         counts = new int[0];
+        rating = 0.0;
     }
 
     /**
      * 
      */
-    public Document(int length) {
+    public SLDArDocument(int length) {
         words = new int[length];
         counts = new int[length];
         this.length = length;
+        this.rating = 0.0;
+    }
+    
+    public SLDArDocument(Document doc, double rating){
+        this.words = doc.getWords();
+        this.counts = doc.getCounts();
+        this.length = doc.getLength();
+        this.total = doc.getTotal();
+        this.rating = rating;
     }
 
     public void compile() {
@@ -158,6 +155,14 @@ public class Document {
      */
     public void setWords(int[] is) {
         words = is;
+    }
+    
+    public void setRating(double rating){
+        this.rating = rating;
+    }
+    
+    public double getRating(){
+        return this.rating;
     }
 
     /*
